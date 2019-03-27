@@ -15,5 +15,5 @@ cd `dirname $0`
 # Compile code.
 mkdir -p build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake ..
 make $*
