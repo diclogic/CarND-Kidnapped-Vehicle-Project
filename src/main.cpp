@@ -2,6 +2,7 @@
 #include <uWS/uWS.h>
 #include <iostream>
 #include <string>
+#include <gperftools/profiler.h>
 #include "json.hpp"
 #include "particle_filter.h"
 
@@ -25,8 +26,42 @@ string hasData(string s) {
   return "";
 }
 
+class CProfilerScope
+{
+public:
+  CProfilerScope(const char* szProfName)
+  {
+    //std::cout<< "Start profiling.." << std::endl;
+    ProfilerStart(szProfName);
+  }
+
+  ~CProfilerScope()
+  {
+    std::cout<< "End profiling.." << std::endl;
+    ProfilerStop();
+  }
+};
+
+uWS::WebSocket<uWS::SERVER> g_ws;
+
+void sigint_action(int s) {
+  std::cout<<"received SIGINT.." <<std::endl;
+  if (g_ws.getPollHandle())
+  {
+    //g_ws.close();
+    ProfilerStop();
+    exit(0);
+  }
+}
+
 int main() {
   uWS::Hub h;
+
+  struct sigaction sigIntHandler;
+  sigIntHandler.sa_handler = &sigint_action;
+  sigemptyset(&sigIntHandler.sa_mask);
+  sigIntHandler.sa_flags = 0;
+  sigaction(SIGINT, &sigIntHandler, NULL);
 
   // Set up parameters here
   double delta_t = 0.1;  // Time elapsed between measurements [sec]
@@ -47,9 +82,12 @@ int main() {
   // Create particle filter
   ParticleFilter pf;
 
+
   h.onMessage([&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                uWS::OpCode opCode) {
+    //CProfilerScope _ps("myprof2.prof");
+
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -152,11 +190,13 @@ int main() {
     }  // end websocket message if
   }); // end h.onMessage
 
-  h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+  h.onConnection([](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+    new ( (void*) &g_ws) uWS::WebSocket<uWS::SERVER>(ws);
     std::cout << "Connected!!!" << std::endl;
+    ::ProfilerStart("myprof2.prof");
   });
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, 
+  h.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, 
                          char *message, size_t length) {
     ws.close();
     std::cout << "Disconnected" << std::endl;
@@ -170,5 +210,7 @@ int main() {
     return -1;
   }
   
+  //CProfilerScope _ps("main");
   h.run();
+
 }

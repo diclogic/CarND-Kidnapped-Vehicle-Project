@@ -4,8 +4,9 @@ cmake_minimum_required (VERSION 3.5)
 
 add_definitions(-std=c++11)
 
-set(CXX_FLAGS "-Wall -O3")
+set(CXX_FLAGS "-Wall -O3 -lprofiler")
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed,-lprofiler,--as-needed")
 
 file(GLOB HEADERS src/*.h)
 file(GLOB HEADERS_HPP src/*.hpp)
